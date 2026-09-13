@@ -3,27 +3,32 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 function getGenAIClient() {
-  const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.VITE_GEMINI_API_KEY,
-    process.env.NETLIFY_GEMINI_API_KEY,
-    process.env.API_KEY
-  ];
-  let apiKey = null;
-  for (const k of keys) {
-    if (k && typeof k === 'string') {
-      const trimmed = k.trim().replace(/^["']|["']$/g, '');
-      if (trimmed !== '' && !trimmed.includes('your_actual_gemini_api_key_here')) {
-        apiKey = trimmed;
-        break;
+  try {
+    const keys = [
+      process.env.GEMINI_API_KEY,
+      process.env.VITE_GEMINI_API_KEY,
+      process.env.NETLIFY_GEMINI_API_KEY,
+      process.env.API_KEY
+    ];
+    let apiKey = null;
+    for (const k of keys) {
+      if (k && typeof k === 'string') {
+        const trimmed = k.trim().replace(/^["']|["']$/g, '');
+        if (trimmed !== '' && !trimmed.includes('your_actual_gemini_api_key_here')) {
+          apiKey = trimmed;
+          break;
+        }
       }
     }
-  }
 
-  if (!apiKey) {
+    if (!apiKey) {
+      return null;
+    }
+    return new GoogleGenAI({ apiKey });
+  } catch (err) {
+    console.error('Failed to initialize GoogleGenAI client:', err.message);
     return null;
   }
-  return new GoogleGenAI({ apiKey });
 }
 
 // Fallback rule-based live signal when API key is unconfigured or low-latency local check is needed
