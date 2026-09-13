@@ -1,0 +1,97 @@
+{
+  "sessions": [
+    {
+      "id": "sess_1789312414481",
+      "timestamp": "2026-09-13T15:13:34.483Z",
+      "mode": "Interview",
+      "communicationPower": 78,
+      "scores": {
+        "clarity": 78,
+        "storytelling": 73,
+        "engagement": 78,
+        "wit": 68,
+        "delivery": 76,
+        "confidence": 80,
+        "structure": 78,
+        "vocabulary": 80,
+        "responsiveness": 85,
+        "audienceAwareness": 78,
+        "conciseness": 82,
+        "emotionalConnection": 75,
+        "answerQuality": 78,
+        "relevance": 80,
+        "evidence": 73,
+        "reasoning": 78,
+        "problemSolving": 78,
+        "professionalism": 85,
+        "interviewImpact": 78
+      },
+      "biggestWeakness": "Could include more specific metrics or concrete examples.",
+      "oneBigUpgrade": "Pause silently when gathering your thoughts instead of filling space with sound.",
+      "durationSeconds": 15,
+      "transcriptSnippet": "Actually."
+    },
+    {
+      "id": "sess_1789312342943",
+      "timestamp": "2026-09-13T15:12:22.944Z",
+      "mode": "Interview",
+      "communicationPower": 80,
+      "scores": {
+        "clarity": 80,
+        "storytelling": 75,
+        "engagement": 80,
+        "wit": 70,
+        "delivery": 78,
+        "confidence": 82,
+        "structure": 80,
+        "vocabulary": 80,
+        "responsiveness": 85,
+        "audienceAwareness": 80,
+        "conciseness": 82,
+        "emotionalConnection": 75,
+        "answerQuality": 80,
+        "relevance": 82,
+        "evidence": 75,
+        "reasoning": 80,
+        "problemSolving": 80,
+        "professionalism": 85,
+        "interviewImpact": 80
+      },
+      "biggestWeakness": "Could include more specific metrics or concrete examples.",
+      "oneBigUpgrade": "Pause silently when gathering your thoughts instead of filling space with sound.",
+      "durationSeconds": 2,
+      "transcriptSnippet": "No speech recorded during session."
+    }
+  ],
+  "errorMemory": {
+    "fillerWords": 0,
+    "fastSpeaking": 0,
+    "weakHooks": 0,
+    "rambling": 0,
+    "lackOfEvidence": 2,
+    "monotoneDelivery": 0
+  },
+  "skillsProgress": [
+    {
+      "date": "Initial",
+      "power": 65,
+      "storytelling": 60,
+      "interview": 62,
+      "clarity": 68
+    },
+    {
+      "date": "Sep 13",
+      "power": 80,
+      "storytelling": 75,
+      "interview": 80,
+      "clarity": 80
+    },
+    {
+      "date": "Sep 13",
+      "power": 78,
+      "storytelling": 73,
+      "interview": 78,
+      "clarity": 78
+    }
+  ]
+}
