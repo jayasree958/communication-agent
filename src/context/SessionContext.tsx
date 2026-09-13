@@ -270,18 +270,18 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const actualWpm = actualDuration > 0 ? Math.round((actualWordCount / actualDuration) * 60) : 0;
     const actualFillers = speechStats.fillerCount;
 
-    // Check if enough speech was captured (Part 15 — NO FAKE ANALYSIS)
-    if (actualWordCount < 4 || !finalTranscript || finalTranscript === 'No speech recorded during session.') {
+    // Only show empty session error if ZERO words were spoken/captured at all
+    if (actualWordCount === 0 || !finalTranscript || finalTranscript === 'No speech recorded during session.') {
       setCurrentReport({
         isEmptySession: true,
         communicationPower: 0,
         scores: {},
         whatWorked: [],
-        biggestWeakness: "No usable speech audio captured.",
-        oneBigUpgrade: "Turn on your microphone and speak clearly for at least 10–15 seconds.",
+        biggestWeakness: "No speech audio was detected by the microphone.",
+        oneBigUpgrade: "Turn on your microphone or type in the transcript box to begin.",
         top3Improvements: [],
         practiceExercise: { title: "", instruction: "" },
-        emptyMessage: "Not enough speech was captured to analyze this session."
+        emptyMessage: "No speech audio was detected during this session."
       });
       setSessionState('report');
       return;
@@ -331,53 +331,57 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.warn('Backend session analysis failed, constructing dynamic client report:', err);
       
-      // Calculate real dynamic score based on actual speech metrics
+      // Calculate real dynamic diagnostic score based on actual speech metrics
       let dynamicScore = 70;
-      if (actualWordCount < 15) dynamicScore -= 20;
-      else if (actualWordCount < 30) dynamicScore -= 10;
-      else if (actualWordCount > 60) dynamicScore += 10;
+      if (actualWordCount < 5) dynamicScore = 35;
+      else if (actualWordCount < 15) dynamicScore = 50;
+      else if (actualWordCount < 30) dynamicScore = 65;
+      else if (actualWordCount > 60) dynamicScore = 85;
 
       dynamicScore -= (actualFillers * 6);
-      if (actualWpm > 180) dynamicScore -= 10;
-      else if (actualWpm < 90) dynamicScore -= 10;
+      if (actualWpm > 185) dynamicScore -= 10;
+      else if (actualWpm > 0 && actualWpm < 90) dynamicScore -= 10;
 
-      const finalScore = Math.max(30, Math.min(96, Math.round(dynamicScore)));
+      const finalScore = Math.max(15, Math.min(96, Math.round(dynamicScore)));
 
       const fallbackReport: SessionReport = {
         communicationPower: finalScore,
         scores: {
-          clarity: finalScore,
-          storytelling: Math.max(30, finalScore - 5),
-          engagement: finalScore,
-          delivery: Math.max(30, finalScore - 2),
-          confidence: Math.max(30, finalScore + 2),
-          structure: finalScore,
-          conciseness: actualFillers > 2 ? 55 : 82,
-          interviewImpact: finalScore
+          clarity: actualWordCount < 5 ? 50 : finalScore,
+          storytelling: actualWordCount < 5 ? 15 : Math.max(15, finalScore - 5),
+          engagement: actualWordCount < 5 ? 20 : finalScore,
+          delivery: 50,
+          confidence: actualWordCount < 5 ? 50 : Math.max(30, finalScore + 2),
+          structure: actualWordCount < 5 ? 30 : finalScore,
+          wit: actualWordCount < 5 ? 10 : Math.max(10, finalScore - 10),
+          memorability: actualWordCount < 5 ? 15 : finalScore,
+          conciseness: actualWordCount < 5 ? 40 : (actualFillers > 2 ? 55 : 82),
+          interviewImpact: finalScore,
+          evidence: actualWordCount < 5 ? 10 : Math.max(10, finalScore - 10)
         },
         whatWorked: [
-          `Spoke at a rate of ${actualWpm} WPM across ${actualDuration} seconds.`,
-          `Captured ${actualWordCount} words in ${mode} mode.`
+          `Initiated vocal delivery cleanly (${actualWordCount} word${actualWordCount === 1 ? '' : 's'} recorded).`,
+          `Captured speech audio in ${mode} mode.`
         ],
-        biggestWeakness: actualFillers > 1 
+        biggestWeakness: actualWordCount < 5
+          ? `Extremely brief statement (${actualWordCount} word${actualWordCount === 1 ? '' : 's'}: "${finalTranscript}"). Failed to establish technical depth, context, or engagement.`
+          : actualFillers > 1 
           ? `Used ${actualFillers} filler words ("um", "uh", "like") which reduced clarity.` 
-          : actualWordCount < 25 
-          ? "Answer was very brief. Include specific examples to show depth." 
-          : "Could structure your conclusion with 1 concrete number or metric.",
-        oneBigUpgrade: "Pause silently when gathering thoughts instead of filling sound gap.",
+          : "Answer lacked quantitative metrics or specific project evidence.",
+        oneBigUpgrade: "Follow the STAR framework (Situation -> Task -> Action -> Result) to expand your answer into a structured response.",
         top3Improvements: [
-          "State your core recommendation in sentence 1.",
-          "Use a 2-second silent pause between distinct points.",
-          "End with a clear, memorable closing statement."
+          "State your main technical point in sentence 1.",
+          "Add 1 concrete metric or specific project outcome.",
+          "Expand your answer to at least 3-4 sentences."
         ],
         practiceExercise: {
-          title: "The 30-Second Bullet Challenge",
-          instruction: "Deliver a 30-second statement with 0 filler words and 1 concrete example."
+          title: "The 30-Second Expansion Challenge",
+          instruction: `Take your idea ("${finalTranscript}") and expand it into a structured 30-second response with 1 specific metric.`
         },
         memorabilityAssessment: {
-          score: finalScore,
-          whatListenerRemembers: "The main takeaway of your statement.",
-          howToMakeUnforgettable: "Incorporate a vivid analogy or personal milestone."
+          score: actualWordCount < 5 ? 15 : finalScore,
+          whatListenerRemembers: actualWordCount < 5 ? "A brief opening remark." : "The main takeaway of your statement.",
+          howToMakeUnforgettable: "Incorporate a vivid analogy, personal milestone, or quantitative result."
         },
         transcript: finalTranscript,
         durationSeconds: actualDuration,

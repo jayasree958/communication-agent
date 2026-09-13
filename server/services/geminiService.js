@@ -89,98 +89,7 @@ Output strictly valid JSON:
   }
 }
 
-/**
- * Deep Post-Session Analysis
- */
-export async function evaluateSession(transcript, metrics, mode, extraData = {}) {
-  const ai = getGenAIClient();
-  if (!ai) {
-    return generateFallbackPostSessionReport(transcript, metrics, mode, extraData);
-  }
 
-  const prompt = `
-You are an elite executive communication, storytelling, public speaking, and interview coach.
-Mission: MAKE THE USER IMPOSSIBLE TO IGNORE.
-
-Analyze this completed coaching session:
-Mode: ${mode}
-Full Transcript:
-"""
-${transcript}
-"""
-
-Audio/Visual Metrics Summary:
-- Average WPM: ${metrics.avgWpm || 135}
-- Total Filler Words: ${metrics.fillerCount || 0}
-- Pause Frequency: ${metrics.pauses || 'Balanced'}
-- Voice Energy: ${metrics.energy || 'Moderate'}
-- Framing / Posture: ${metrics.posture || 'Steady'}
-
-Mode Details: ${JSON.stringify(extraData)}
-
-Evaluate deeply and objectively based strictly on evidence in what the user said and how they delivered it.
-Do NOT artificially inflate scores.
-
-Output valid JSON strictly adhering to schema:
-{
-  "communicationPower": 78,
-  "scores": {
-    "clarity": 80,
-    "storytelling": 72,
-    "engagement": 75,
-    "wit": 65,
-    "delivery": 78,
-    "confidence": 82,
-    "structure": 70,
-    "vocabulary": 80,
-    "responsiveness": 85,
-    "audienceAwareness": 76,
-    "conciseness": 68,
-    "emotionalConnection": 74,
-    "answerQuality": 80,
-    "relevance": 85,
-    "evidence": 70,
-    "reasoning": 78,
-    "problemSolving": 75,
-    "professionalism": 88,
-    "interviewImpact": 79
-  },
-  "whatWorked": [
-    "Specific strength point 1 with quote or evidence",
-    "Specific strength point 2 with quote or evidence"
-  ],
-  "biggestWeakness": "The single highest-impact problem identified during the session.",
-  "oneBigUpgrade": "The single change that would transform the user's communication most.",
-  "top3Improvements": [
-    "Actionable improvement 1",
-    "Actionable improvement 2",
-    "Actionable improvement 3"
-  ],
-  "practiceExercise": {
-    "title": "Exercise Name",
-    "instruction": "Step-by-step exercise instructions tailored to fix their biggest weakness."
-  },
-  "memorabilityAssessment": {
-    "score": 75,
-    "whatListenerRemembers": "What a listener would actually remember 24 hours later.",
-    "howToMakeUnforgettable": "Actionable advice to turn this response/speech from clear to unforgettable."
-  }
-}
-`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-
-    return JSON.parse(response.text);
-  } catch (err) {
-    console.error('Gemini Post-Session Analysis Error:', err.message);
-    return generateFallbackPostSessionReport(transcript, metrics, mode, extraData);
-  }
-}
 
 /**
  * Adaptive Interview Question Generator
@@ -461,9 +370,15 @@ export async function evaluateSession(transcript, metrics, mode = 'general', ext
 
   const prompt = `
 Evaluate deeply and objectively based strictly on evidence in what the user said and how they delivered it.
-Do NOT artificially inflate scores or default to 80.
-Calculate scores dynamically across all subscores (ranging from 20 to 98) based on actual speech quality:
-- Penalize heavily for excessive filler words (um, uh, like), rambling, short incomplete answers under 25 words, monotone delivery, or lack of quantitative evidence.
+Do NOT default to 80. Calculate dynamic scores (from 10 to 98) based on actual speech quality:
+
+CRITICAL RULE FOR SHORT / BRIEF TRANSCRIPTS (1-5 words, e.g. "Hello", "I am ready", "Good morning"):
+- Calculate a low diagnostic score (e.g. Communication Power 30-40, Storytelling 15, Engagement 20, Delivery 50, Wit 10, Memorability 15, Evidence 10, Structure 30).
+- State the biggest weakness clearly: "The session consisted of an extremely brief opening statement (${(transcript || '').split(/\s+/).filter(Boolean).length} words: '${transcript}'). Failed to establish immediate engagement, technical depth, or a compelling reason for the audience to listen."
+- Provide One Big Upgrade: "Follow the STAR framework (Situation -> Task -> Action -> Result) to expand your idea into a structured 30-second response with concrete evidence."
+
+CRITICAL RULE FOR FULL TRANSCRIPTS (6+ words):
+- Penalize heavily for excessive filler words (um, uh, like), rambling, or lack of quantitative evidence.
 - Reward clear structure, concise phrasing, vivid storytelling, quantitative metrics, and optimal vocal pace (120-160 WPM).
 - For every weakness listed, cite EXACT quotes/evidence from what the user said.
 
@@ -540,64 +455,90 @@ function generateFallbackPostSessionReport(transcript, metrics, mode, extraData)
   const fillers = metrics.fillerCount || 0;
   const wpm = metrics.wpm || metrics.avgWpm || 135;
 
-  let baseScore = 70;
-  if (wordCount < 15) baseScore -= 25;
-  else if (wordCount < 30) baseScore -= 12;
-  else if (wordCount > 60) baseScore += 10;
+  let score = 70;
 
-  baseScore -= (fillers * 6);
+  if (wordCount < 5) {
+    score = 35; // Brief 1-4 word statement
+  } else if (wordCount < 15) {
+    score = 52;
+  } else if (wordCount < 30) {
+    score = 68;
+  } else if (wordCount >= 45) {
+    score = 84;
+  }
 
-  if (wpm > 180) baseScore -= 12;
-  else if (wpm < 90) baseScore -= 10;
+  // Bonus for zero fillers
+  if (fillers === 0 && wordCount >= 15) score += 6;
+  else score -= (fillers * 5);
 
-  const score = Math.max(30, Math.min(96, Math.round(baseScore)));
+  // Bonus for optimal pace (120 - 160 WPM)
+  if (wpm >= 120 && wpm <= 165 && wordCount >= 20) {
+    score += 5;
+  } else if (wpm > 185) {
+    score -= 8;
+  }
+
+  const finalScore = Math.max(15, Math.min(96, Math.round(score)));
+
+  const hasMetrics = /\b(\d+%|\d+k|\d+m|\d+ million|\d+ billion|\d+x)\b/i.test(transcript);
 
   return {
-    communicationPower: score,
+    communicationPower: finalScore,
     scores: {
-      clarity: score,
-      storytelling: Math.max(30, score - 5),
-      engagement: score,
-      wit: Math.max(30, score - 10),
-      delivery: Math.max(30, score - 2),
-      confidence: Math.max(30, score + 2),
-      structure: score,
-      vocabulary: wordCount > 40 ? 82 : 65,
-      responsiveness: score,
-      audienceAwareness: score,
-      conciseness: fillers > 2 ? 50 : 82,
-      emotionalConnection: Math.max(30, score - 4),
-      answerQuality: score,
-      relevance: score + 2,
-      evidence: wordCount > 50 ? 78 : 55,
-      reasoning: score,
-      problemSolving: score,
-      professionalism: 80,
-      interviewImpact: score
+      clarity: wordCount < 5 ? 50 : finalScore,
+      storytelling: wordCount < 5 ? 15 : Math.max(20, finalScore - 4),
+      engagement: wordCount < 5 ? 20 : finalScore,
+      wit: wordCount < 5 ? 10 : Math.max(15, finalScore - 8),
+      delivery: wordCount < 5 ? 50 : Math.min(95, finalScore + 2),
+      confidence: wordCount < 5 ? 50 : Math.min(95, finalScore + 4),
+      structure: wordCount < 5 ? 30 : (hasMetrics ? Math.min(95, finalScore + 6) : finalScore),
+      vocabulary: wordCount > 40 ? Math.min(95, finalScore + 5) : 65,
+      responsiveness: finalScore,
+      audienceAwareness: wordCount < 5 ? 20 : finalScore,
+      conciseness: fillers > 2 ? 50 : (wordCount < 5 ? 40 : 88),
+      emotionalConnection: Math.max(20, finalScore - 4),
+      answerQuality: finalScore,
+      relevance: Math.min(95, finalScore + 2),
+      evidence: hasMetrics ? 92 : (wordCount < 5 ? 10 : 60),
+      reasoning: finalScore,
+      problemSolving: finalScore,
+      professionalism: Math.min(96, finalScore + 4),
+      interviewImpact: finalScore
     },
-    whatWorked: [
-      `Spoke at a vocal pace of ${wpm} WPM across ${wordCount} words.`,
-      "Captured active spoken speech during the session."
+    whatWorked: wordCount < 5 ? [
+      `Initiated vocal delivery cleanly (${wordCount} word${wordCount === 1 ? '' : 's'} recorded).`
+    ] : [
+      `Delivered a structured ${wordCount}-word response at an optimal pace of ${wpm} WPM.`,
+      fillers === 0 ? "Maintained flawless delivery with 0 filler words." : `Kept filler usage to ${fillers} words.`,
+      hasMetrics ? "Included quantitative metrics and business impact figures." : "Demonstrated clear domain communication."
     ],
-    biggestWeakness: fillers > 1 
+    biggestWeakness: wordCount < 5 
+      ? `Extremely brief statement (${wordCount} word${wordCount === 1 ? '' : 's'}: "${transcript}"). Failed to establish technical depth, context, or engagement.`
+      : fillers > 1 
       ? `Used ${fillers} filler words ("um", "uh", "like") which diluted confidence and clarity.` 
-      : wordCount < 25 
-      ? `Answer was brief (${wordCount} words). Elaborate further to demonstrate depth.` 
-      : "Could structure your core message with a direct quantitative example.",
-    oneBigUpgrade: "Pause silently when gathering thoughts instead of filling sound gaps.",
+      : !hasMetrics 
+      ? "Answer lacked quantitative metrics or specific outcome figures."
+      : "Could end with a stronger call-to-action or memorable summary statement.",
+    oneBigUpgrade: wordCount < 5
+      ? "Follow the STAR framework (Situation -> Task -> Action -> Result) to expand your idea into a structured response."
+      : fillers > 0 
+      ? "Pause silently when gathering thoughts instead of filling sound gaps."
+      : "Use a 2-second silent pause before your concluding sentence to let key metrics land.",
     top3Improvements: [
       "State your core recommendation in sentence #1.",
       "Support claims with 1 concrete number or specific event.",
       "End with a clear, memorable closing statement."
     ],
     practiceExercise: {
-      title: "The 30-Second Bullet Challenge",
-      instruction: "State your main point, give 1 specific example, and stop cleanly."
+      title: wordCount < 5 ? "30-Second STAR Expansion" : "The High-Impact Metric Drill",
+      instruction: wordCount < 5 
+        ? `Take your idea ("${transcript}") and expand it into a structured 30-second response with 1 specific metric.`
+        : "Deliver your main recommendation in sentence 1, follow with 2 quantitative metrics, and stop cleanly."
     },
     memorabilityAssessment: {
-      score: score,
-      whatListenerRemembers: "The main conclusion of your statement.",
-      howToMakeUnforgettable: "Add a striking analogy or personal milestone."
+      score: wordCount < 5 ? 15 : finalScore,
+      whatListenerRemembers: wordCount < 5 ? "A brief opening remark." : "The core technical result and key conclusion.",
+      howToMakeUnforgettable: "Incorporate a striking analogy, personal milestone, or high-stakes challenge."
     }
   };
 }
