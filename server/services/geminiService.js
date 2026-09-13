@@ -3,8 +3,24 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 function getGenAIClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_actual_gemini_api_key_here')) {
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.VITE_GEMINI_API_KEY,
+    process.env.NETLIFY_GEMINI_API_KEY,
+    process.env.API_KEY
+  ];
+  let apiKey = null;
+  for (const k of keys) {
+    if (k && typeof k === 'string') {
+      const trimmed = k.trim().replace(/^["']|["']$/g, '');
+      if (trimmed !== '' && !trimmed.includes('your_actual_gemini_api_key_here')) {
+        apiKey = trimmed;
+        break;
+      }
+    }
+  }
+
+  if (!apiKey) {
     return null;
   }
   return new GoogleGenAI({ apiKey });

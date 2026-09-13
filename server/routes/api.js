@@ -13,15 +13,29 @@ const router = express.Router();
 
 // Health check and Gemini API key status check
 router.get('/health', (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const isKeyConfigured = Boolean(apiKey && apiKey.trim() !== '' && !apiKey.includes('your_actual_gemini_api_key_here'));
-  
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.VITE_GEMINI_API_KEY,
+    process.env.NETLIFY_GEMINI_API_KEY,
+    process.env.API_KEY
+  ];
+  let isKeyConfigured = false;
+  for (const k of keys) {
+    if (k && typeof k === 'string') {
+      const trimmed = k.trim().replace(/^["']|["']$/g, '');
+      if (trimmed !== '' && !trimmed.includes('your_actual_gemini_api_key_here')) {
+        isKeyConfigured = true;
+        break;
+      }
+    }
+  }
+
   res.json({
     status: 'ok',
     geminiConfigured: isKeyConfigured,
     message: isKeyConfigured 
       ? 'Gemini API is securely configured on server.'
-      : 'GEMINI_API_KEY environment variable is missing. Set it in .env file or server environment.'
+      : 'GEMINI_API_KEY environment variable is missing. Set it in Netlify Environment Variables or .env file.'
   });
 });
 
