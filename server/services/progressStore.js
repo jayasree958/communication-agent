@@ -1,13 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // In serverless environment (Netlify/AWS Lambda), use /tmp if primary directory is read-only
-const PRIMARY_DATA_FILE = path.join(__dirname, '../data/user_progress.json');
+const PRIMARY_DATA_FILE = path.join(process.cwd(), 'server/data/user_progress.json');
 const TMP_DATA_FILE = path.join(os.tmpdir(), 'impact_user_progress.json');
 
 // In-memory fallback

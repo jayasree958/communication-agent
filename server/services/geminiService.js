@@ -1,32 +1,64 @@
-import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 dotenv.config();
 
-function getGenAIClient() {
-  try {
-    const keys = [
-      process.env.GEMINI_API_KEY,
-      process.env.VITE_GEMINI_API_KEY,
-      process.env.NETLIFY_GEMINI_API_KEY,
-      process.env.API_KEY
-    ];
-    let apiKey = null;
-    for (const k of keys) {
-      if (k && typeof k === 'string') {
-        const trimmed = k.trim().replace(/^["']|["']$/g, '');
-        if (trimmed !== '' && !trimmed.includes('your_actual_gemini_api_key_here')) {
-          apiKey = trimmed;
-          break;
-        }
+function getApiKey() {
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.VITE_GEMINI_API_KEY,
+    process.env.NETLIFY_GEMINI_API_KEY,
+    process.env.API_KEY
+  ];
+  for (const k of keys) {
+    if (k && typeof k === 'string') {
+      const trimmed = k.trim().replace(/^["']|["']$/g, '');
+      if (trimmed !== '' && !trimmed.includes('your_actual_gemini_api_key_here')) {
+        return trimmed;
       }
     }
+  }
+  return null;
+}
 
-    if (!apiKey) {
-      return null;
+export async function callGeminiAPI(prompt) {
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
+
+  // 1. Primary: Native fetch to Gemini REST API (zero serverless bundler friction)
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' }
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text;
+    } else {
+      const errText = await response.text();
+      console.warn('Gemini REST API non-200 response:', response.status, errText);
     }
-    return new GoogleGenAI({ apiKey });
   } catch (err) {
-    console.error('Failed to initialize GoogleGenAI client:', err.message);
+    console.warn('Gemini REST API fetch failed, trying SDK fallback:', err.message);
+  }
+
+  // 2. Secondary fallback: @google/genai SDK dynamic import
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    const res = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+    return res.text;
+  } catch (err) {
+    console.error('Gemini SDK fallback failed:', err.message);
     return null;
   }
 }
@@ -64,11 +96,6 @@ export function calculateLocalLiveSignal(transcript, metrics = {}) {
  * Generate lightweight live coaching feedback (minimal interruptions rule)
  */
 export async function generateLiveSignal(transcript, metrics, mode) {
-  const ai = getGenAIClient();
-  if (!ai) {
-    return calculateLocalLiveSignal(transcript, metrics);
-  }
-
   const prompt = `
 You are the Live Communication Coach for an application whose mission is "MAKE THE USER IMPOSSIBLE TO IGNORE".
 Mode: ${mode}
@@ -97,20 +124,14 @@ Output strictly valid JSON:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-
-    return JSON.parse(response.text);
+    const text = await callGeminiAPI(prompt);
+    if (!text) return calculateLocalLiveSignal(transcript, metrics);
+    return JSON.parse(text);
   } catch (err) {
     console.error('Gemini Live Signal Error:', err.message);
     return calculateLocalLiveSignal(transcript, metrics);
   }
 }
-
-
 
 /**
  * Adaptive Interview Question Generator
@@ -124,15 +145,10 @@ export async function generateAdaptiveInterviewQuestion(
   jobRole = 'Software Engineer',
   experienceLevel = 'Fresher'
 ) {
-  const ai = getGenAIClient();
-  if (!ai) {
-    return generateFallbackInterviewQuestion(lastAnswer, interviewerType, difficultyLevel, jobRole, experienceLevel);
-  }
-
   const prompt = `
 You are an expert interviewer with personality "${interviewerType}" at difficulty level ${difficultyLevel}/7.
 Target Role: "${jobRole}"
-Candidate Candidate Experience Level: "${experienceLevel}" (e.g. Fresher / Entry Level vs Experienced Professional).
+Candidate Experience Level: "${experienceLevel}" (e.g. Fresher / Entry Level vs Experienced Professional).
 
 Goal: Perform ADAPTIVE & ROLE-SPECIFIC INTERVIEWING.
 
@@ -167,12 +183,9 @@ Return JSON:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-    return JSON.parse(response.text);
+    const text = await callGeminiAPI(prompt);
+    if (!text) return generateFallbackInterviewQuestion(lastAnswer, interviewerType, difficultyLevel, jobRole, experienceLevel);
+    return JSON.parse(text);
   } catch (err) {
     console.error('Gemini Adaptive Interview Error:', err.message);
     return generateFallbackInterviewQuestion(lastAnswer, interviewerType, difficultyLevel, jobRole, experienceLevel);
@@ -191,11 +204,6 @@ export async function evaluateInterviewAnswer(
   jobRole = 'Software Engineer',
   experienceLevel = 'Fresher'
 ) {
-  const ai = getGenAIClient();
-  if (!ai) {
-    return generateFallbackInterviewAnswerEval(question, answer, audioMetrics, experienceLevel);
-  }
-
   const prompt = `
 You are an elite Interview Coach evaluating a candidate for the role: "${jobRole}".
 Candidate Experience Level: "${experienceLevel}"
@@ -240,12 +248,9 @@ Return JSON:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-    return JSON.parse(response.text);
+    const text = await callGeminiAPI(prompt);
+    if (!text) return generateFallbackInterviewAnswerEval(question, answer, audioMetrics, experienceLevel);
+    return JSON.parse(text);
   } catch (err) {
     console.error('Gemini Interview Eval Error:', err.message);
     return generateFallbackInterviewAnswerEval(question, answer, audioMetrics, experienceLevel);
@@ -256,16 +261,6 @@ Return JSON:
  * Storytelling Retelling Loop Engine
  */
 export async function generateStoryCoaching(round, storyText, promptTopic) {
-  const ai = getGenAIClient();
-  if (!ai) {
-    return {
-      round,
-      feedback: "Focus on adding a clear conflict and visual scene details.",
-      improvements: ["Start immediately at the moment of tension.", "Name the characters and stakes."],
-      nextInstruction: "Tell the story again, starting at the moment everything went wrong."
-    };
-  }
-
   const prompt = `
 You are a Master Storytelling Coach.
 Mission: Transform Information -> Experience, Explanation -> Scene, Event -> Story.
@@ -300,12 +295,18 @@ Return JSON:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-    return JSON.parse(response.text);
+    const text = await callGeminiAPI(prompt);
+    if (!text) {
+      return {
+        round,
+        score: 72,
+        elementChecklist: { hook: "Weak", conflict: "Present", stakes: "Medium", emotion: "Present", memorability: "Medium" },
+        biggestWeaknesses: ["Too much background setup before reaching the core event."],
+        targetedImprovements: ["Cut the first 3 sentences of backstory.", "Describe what you saw and felt when the problem occurred."],
+        retellChallenge: "Retell the story starting directly inside the scene."
+      };
+    }
+    return JSON.parse(text);
   } catch (err) {
     console.error('Gemini Story Coaching Error:', err.message);
     return {
@@ -323,17 +324,6 @@ Return JSON:
  * Wit Training & Contextual Humor Evaluator
  */
 export async function generateWitChallenge(transcript, topic) {
-  const ai = getGenAIClient();
-  if (!ai) {
-    return {
-      techniqueUsed: "Analogy & Contrast",
-      rating: "Good",
-      feedback: "Natural understatement. Keep the rhythm punchy.",
-      emotionalRhythm: "Depth -> Relief -> Payoff",
-      isAppropriate: true
-    };
-  }
-
   const prompt = `
 You are a Wit & Humor Coach for professional communicators.
 Wit should support communication rather than turn the user into a stand-up comedian.
@@ -360,12 +350,19 @@ Return JSON:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-    return JSON.parse(response.text);
+    const text = await callGeminiAPI(prompt);
+    if (!text) {
+      return {
+        witScore: 75,
+        techniqueIdentified: "Contrast",
+        isNatural: true,
+        isAppropriate: true,
+        feedback: "Solid observation. A brief pause before the punchline will heighten effect.",
+        witUpgrade: "Contrast the high expectation with the mundane reality.",
+        emotionalRhythmStatus: "Effective tension relief."
+      };
+    }
+    return JSON.parse(text);
   } catch (err) {
     console.error('Gemini Wit Challenge Error:', err.message);
     return {
@@ -384,11 +381,6 @@ Return JSON:
  * Evaluate Session (Post-Session Analysis)
  */
 export async function evaluateSession(transcript, metrics, mode = 'general', extraData = {}) {
-  const ai = getGenAIClient();
-  if (!ai) {
-    return generateFallbackPostSessionReport(transcript, metrics, mode, extraData);
-  }
-
   const prompt = `
 Evaluate deeply and objectively based strictly on evidence in what the user said and how they delivered it.
 Do NOT default to 80. Calculate dynamic scores (from 10 to 98) based on actual speech quality:
@@ -456,13 +448,9 @@ Output valid JSON strictly adhering to schema:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-
-    return JSON.parse(response.text);
+    const text = await callGeminiAPI(prompt);
+    if (!text) return generateFallbackPostSessionReport(transcript, metrics, mode, extraData);
+    return JSON.parse(text);
   } catch (err) {
     console.error('Gemini Post-Session Analysis Error:', err.message);
     return generateFallbackPostSessionReport(transcript, metrics, mode, extraData);
