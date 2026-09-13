@@ -94,6 +94,10 @@ export class SpeechRecognitionEngine {
 
   public stop() {
     this.isListening = false;
+    if (this.interimTranscript.trim()) {
+      this.fullTranscript += (this.fullTranscript ? ' ' : '') + this.interimTranscript.trim();
+      this.interimTranscript = '';
+    }
     if (this.recognition) {
       try {
         this.recognition.stop();
@@ -101,6 +105,15 @@ export class SpeechRecognitionEngine {
         // Ignored
       }
     }
+    this.emitStats();
+  }
+
+  public getFinalTranscript(): string {
+    if (this.interimTranscript.trim()) {
+      this.fullTranscript += (this.fullTranscript ? ' ' : '') + this.interimTranscript.trim();
+      this.interimTranscript = '';
+    }
+    return this.fullTranscript.trim();
   }
 
   public clear() {

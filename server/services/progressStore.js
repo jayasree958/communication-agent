@@ -1,44 +1,66 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_FILE = path.join(__dirname, '../data/user_progress.json');
 
-// Ensure data folder exists
-function ensureDataFolder() {
-  const dir = path.dirname(DATA_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+// In serverless environment (Netlify/AWS Lambda), use /tmp if primary directory is read-only
+const PRIMARY_DATA_FILE = path.join(__dirname, '../data/user_progress.json');
+const TMP_DATA_FILE = path.join(os.tmpdir(), 'impact_user_progress.json');
+
+// In-memory fallback
+let inMemoryProgress = {
+  sessions: [],
+  errorMemory: {
+    "fillerWords": 0,
+    "fastSpeaking": 0,
+    "weakHooks": 0,
+    "rambling": 0,
+    "lackOfEvidence": 0,
+    "monotoneDelivery": 0
+  },
+  skillsProgress: [
+    { date: 'Initial', power: 65, storytelling: 60, interview: 62, clarity: 68 }
+  ]
+};
+
+function getActiveFilePath() {
+  try {
+    const primaryDir = path.dirname(PRIMARY_DATA_FILE);
+    if (!fs.existsSync(primaryDir)) {
+      fs.mkdirSync(primaryDir, { recursive: true });
+    }
+    return PRIMARY_DATA_FILE;
+  } catch (err) {
+    return TMP_DATA_FILE;
   }
-  if (!fs.existsSync(DATA_FILE)) {
-    const initialData = {
-      sessions: [],
-      errorMemory: {
-        "fillerWords": 0,
-        "fastSpeaking": 0,
-        "weakHooks": 0,
-        "rambling": 0,
-        "lackOfEvidence": 0,
-        "monotoneDelivery": 0
-      },
-      skillsProgress: [
-        { date: 'Initial', power: 65, storytelling: 60, interview: 62, clarity: 68 },
-      ]
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+}
+
+function ensureDataFolder() {
+  const filePath = getActiveFilePath();
+  if (!fs.existsSync(filePath)) {
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(inMemoryProgress, null, 2));
+    } catch (err) {
+      console.warn('Could not write initial progress file, using in-memory store:', err.message);
+    }
   }
 }
 
 export function getProgress() {
   ensureDataFolder();
+  const filePath = getActiveFilePath();
   try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    return JSON.parse(raw);
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      inMemoryProgress = JSON.parse(raw);
+    }
+    return inMemoryProgress;
   } catch (err) {
-    console.error('Error reading progress file:', err.message);
-    return { sessions: [], errorMemory: {}, skillsProgress: [] };
+    console.warn('Error reading progress file, returning in-memory:', err.message);
+    return inMemoryProgress;
   }
 }
 
@@ -83,6 +105,15 @@ export function saveSessionResult(sessionData) {
   if (current.sessions.length > 30) current.sessions = current.sessions.slice(0, 30);
   if (current.skillsProgress.length > 20) current.skillsProgress = current.skillsProgress.slice(-20);
 
-  fs.writeFileSync(DATA_FILE, JSON.stringify(current, null, 2));
+  inMemoryProgress = current;
+
+  try {
+    const filePath = getActiveFilePath();
+    fs.writeFileSync(filePath, JSON.stringify(current, null, 2));
+  } catch (err) {
+    console.warn('Could not persist session result to disk, saved in-memory:', err.message);
+  }
+
   return current;
 }
+

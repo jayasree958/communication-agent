@@ -77,7 +77,7 @@ Output strictly valid JSON:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
@@ -170,7 +170,7 @@ Output valid JSON strictly adhering to schema:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
@@ -238,7 +238,7 @@ Return JSON:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
@@ -311,7 +311,7 @@ Return JSON:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
@@ -371,7 +371,7 @@ Return JSON:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
@@ -431,7 +431,7 @@ Return JSON:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });

@@ -176,6 +176,26 @@ export const PostSessionReport: React.FC = () => {
         )}
       </div>
 
+      {/* Session Metrics Bar */}
+      <div className="glass-panel" style={{ padding: '16px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', textAlign: 'center' }}>
+        <div>
+          <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 700 }}>Duration</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#38bdf8' }}>{currentReport.durationSeconds || 0}s</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 700 }}>Total Words</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#a5b4fc' }}>{currentReport.wordCount || 0}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 700 }}>Pace (WPM)</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#34d399' }}>{currentReport.wpm || 135}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 700 }}>Filler Words</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: (currentReport.fillerCount || 0) > 3 ? '#f43f5e' : '#34d399' }}>{currentReport.fillerCount || 0}</div>
+        </div>
+      </div>
+
       {/* MEMORABILITY AUDIT */}
       {currentReport.memorabilityAssessment && (
         <div className="glass-panel" style={{ padding: '20px', background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
@@ -186,6 +206,28 @@ export const PostSessionReport: React.FC = () => {
           <div style={{ fontSize: '0.88rem', color: '#e5e7eb', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div><strong>What the listener remembers tomorrow:</strong> {currentReport.memorabilityAssessment.whatListenerRemembers}</div>
             <div><strong>How to make it unforgettable:</strong> {currentReport.memorabilityAssessment.howToMakeUnforgettable}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Actual Analyzed Session Transcript */}
+      {currentReport.transcript && (
+        <div className="glass-panel" style={{ padding: '20px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#818cf8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Analyzed Session Transcript
+          </h4>
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '8px',
+            padding: '14px',
+            fontSize: '0.88rem',
+            lineHeight: 1.6,
+            color: '#e5e7eb',
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}>
+            "{currentReport.transcript}"
           </div>
         </div>
       )}

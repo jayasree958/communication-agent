@@ -37,6 +37,11 @@ export interface SessionReport {
     whatListenerRemembers: string;
     howToMakeUnforgettable: string;
   };
+  transcript?: string;
+  durationSeconds?: number;
+  wordCount?: number;
+  wpm?: number;
+  fillerCount?: number;
 }
 
 interface SessionContextType {
@@ -129,7 +134,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Interview Mode Customization State
   const [jobRole, setJobRole] = useState('Software Engineer');
-  const [experienceLevel, setExperienceLevel] = useState('Fresher / Entry Level');
+  const [experienceLevel, setExperienceLevel] = useState('Fresher / Entry Level (0-1 yrs)');
   const [interviewerType, setInterviewerType] = useState('Professional');
   const [difficultyLevel, setDifficultyLevel] = useState(1);
 
@@ -248,33 +253,109 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const stopAndAnalyzeSession = async () => {
+    let capturedTranscript = '';
+    if (speechEngineRef.current) {
+      capturedTranscript = speechEngineRef.current.getFinalTranscript();
+      speechEngineRef.current.stop();
+    }
     if (mediaEngineRef.current) mediaEngineRef.current.stopMedia();
-    if (speechEngineRef.current) speechEngineRef.current.stop();
     setIsMediaActive(false);
 
     setSessionState('analyzing');
 
-    const fullTranscript = (speechStats.transcript + ' ' + speechStats.interimTranscript).trim();
+    const finalTranscript = capturedTranscript || (speechStats.transcript + ' ' + speechStats.interimTranscript).trim();
+
+    const actualDuration = sessionTimerSeconds || 1;
+    const actualWordCount = finalTranscript.split(/\s+/).filter(Boolean).length;
+    const actualWpm = Math.round((actualWordCount / actualDuration) * 60) || audioMetrics.wpm || 135;
+    const actualFillers = speechStats.fillerCount;
+
+    const payload = {
+      transcript: finalTranscript || 'No speech recorded during session.',
+      metrics: {
+        ...audioMetrics,
+        wpm: actualWpm,
+        avgWpm: actualWpm,
+        fillerCount: actualFillers
+      },
+      mode,
+      durationSeconds: actualDuration,
+      extraData: { interviewHistory, storyRound, difficultyLevel, interviewerType, jobRole, experienceLevel }
+    };
 
     try {
       const res = await fetch('/api/coach/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transcript: fullTranscript || 'No speech recorded during session.',
-          metrics: audioMetrics,
-          mode,
-          durationSeconds: sessionTimerSeconds,
-          extraData: { interviewHistory, storyRound, difficultyLevel, interviewerType, jobRole, experienceLevel }
-        })
+        body: JSON.stringify(payload)
       });
 
+      if (!res.ok) {
+        throw new Error(`API returned HTTP status ${res.status}`);
+      }
+
       const data = await res.json();
-      setCurrentReport(data.analysis);
-      if (data.progress) setProgressData(data.progress);
-      setSessionState('report');
+      if (data && data.analysis) {
+        const fullReport: SessionReport = {
+          ...data.analysis,
+          transcript: finalTranscript,
+          durationSeconds: actualDuration,
+          wordCount: actualWordCount,
+          wpm: actualWpm,
+          fillerCount: actualFillers
+        };
+        setCurrentReport(fullReport);
+        if (data.progress) setProgressData(data.progress);
+      } else {
+        throw new Error('Analysis property missing in server response');
+      }
     } catch (err) {
-      console.error('Session analysis failed:', err);
+      console.warn('Backend session analysis failed, constructing local report fallback:', err);
+      const fallbackScore = Math.max(50, Math.min(95, 80 - actualFillers * 3 + (actualWordCount > 20 ? 10 : 0)));
+      const fallbackReport: SessionReport = {
+        communicationPower: fallbackScore,
+        scores: {
+          clarity: fallbackScore,
+          storytelling: Math.max(50, fallbackScore - 5),
+          engagement: fallbackScore,
+          delivery: Math.max(50, fallbackScore - 2),
+          confidence: Math.max(50, fallbackScore + 2),
+          structure: fallbackScore,
+          conciseness: actualFillers > 2 ? 65 : 82,
+          interviewImpact: fallbackScore
+        },
+        whatWorked: [
+          `Maintained a vocal rate of ~${actualWpm} WPM across ${actualDuration} seconds.`,
+          `Delivered ${actualWordCount} total words during the ${mode} session.`
+        ],
+        biggestWeakness: actualFillers > 2 
+          ? `Detected ${actualFillers} filler words ("um", "uh", "like") which diluted impact.` 
+          : actualWordCount < 20 
+          ? "Speech duration was brief. Elaborate with additional context and examples." 
+          : "Could structure your core message with a direct quantitative example.",
+        oneBigUpgrade: "Pause silently when gathering thoughts instead of filling sound gap.",
+        top3Improvements: [
+          "State your core recommendation in sentence 1.",
+          "Use a 2-second silent pause between distinct points.",
+          "End with a clear, memorable closing statement."
+        ],
+        practiceExercise: {
+          title: "The 30-Second Bullet Challenge",
+          instruction: "Deliver a 30-second statement with 0 filler words and 1 concrete example."
+        },
+        memorabilityAssessment: {
+          score: fallbackScore,
+          whatListenerRemembers: "The main takeaway of your statement.",
+          howToMakeUnforgettable: "Incorporate a vivid analogy or personal milestone."
+        },
+        transcript: finalTranscript,
+        durationSeconds: actualDuration,
+        wordCount: actualWordCount,
+        wpm: actualWpm,
+        fillerCount: actualFillers
+      };
+      setCurrentReport(fallbackReport);
+    } finally {
       setSessionState('report');
     }
   };

@@ -21,13 +21,21 @@ const STANDARD_ROLES = [
   'Financial Analyst',
   'Human Resources / Recruiter',
   'UI/UX Designer',
+  'DevOps / Cloud Architect',
+  'Cybersecurity Specialist',
+  'Operations & Supply Chain Manager',
+  'Strategy & Management Consultant',
+  'Customer Success Lead',
+  'Project Manager / Scrum Master',
   'Custom Role'
 ];
 
 const EXPERIENCE_LEVELS = [
-  { id: 'Fresher / Entry Level', label: '🎓 Fresher / Entry Level', desc: 'Focuses on fundamentals, academic/personal projects, internships, learning agility, and core logic.' },
+  { id: 'Fresher / Entry Level (0-1 yrs)', label: '🎓 Fresher / Entry Level (0-1 yrs)', desc: 'Focuses on fundamentals, academic/personal projects, internships, learning agility, and core logic.' },
   { id: 'Mid-Level Professional (2-5 yrs)', label: '💼 Mid-Level (2-5 yrs)', desc: 'Focuses on practical project execution, domain ownership, collaboration, and metric achievements.' },
-  { id: 'Senior / Executive Leader (5+ yrs)', label: '🚀 Senior / Executive (5+ yrs)', desc: 'Focuses on strategic vision, architecture trade-offs, ROI, organizational leadership, and team management.' }
+  { id: 'Senior Specialist / Team Lead (5-8 yrs)', label: '🚀 Senior Specialist / Lead (5-8 yrs)', desc: 'Focuses on deep domain expertise, system trade-offs, mentoring, and risk management.' },
+  { id: 'Manager / Director (8-12 yrs)', label: '👔 Manager / Director (8-12 yrs)', desc: 'Focuses on team leadership, resource allocation, cross-functional alignment, and project execution.' },
+  { id: 'Executive / VP / C-Suite (12+ yrs)', label: '👑 Executive / VP / C-Suite (12+ yrs)', desc: 'Focuses on P&L responsibility, strategic vision, company culture, ROI, and organizational transformation.' }
 ];
 
 export const InterviewMode: React.FC = () => {
