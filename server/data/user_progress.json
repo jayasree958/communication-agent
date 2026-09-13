@@ -1,6 +1,130 @@
 {
   "sessions": [
     {
+      "id": "sess_1789326207615",
+      "timestamp": "2026-09-13T19:03:27.616Z",
+      "mode": "Interview",
+      "communicationPower": 80,
+      "scores": {
+        "clarity": 80,
+        "storytelling": 75,
+        "engagement": 80,
+        "wit": 70,
+        "delivery": 78,
+        "confidence": 82,
+        "structure": 80,
+        "vocabulary": 80,
+        "responsiveness": 85,
+        "audienceAwareness": 80,
+        "conciseness": 82,
+        "emotionalConnection": 75,
+        "answerQuality": 80,
+        "relevance": 82,
+        "evidence": 75,
+        "reasoning": 80,
+        "problemSolving": 80,
+        "professionalism": 85,
+        "interviewImpact": 80
+      },
+      "biggestWeakness": "Could include more specific metrics or concrete examples.",
+      "oneBigUpgrade": "Pause silently when gathering your thoughts instead of filling space with sound.",
+      "durationSeconds": 39,
+      "transcriptSnippet": "Hello."
+    },
+    {
+      "id": "sess_1789326145574",
+      "timestamp": "2026-09-13T19:02:25.574Z",
+      "mode": "Interview",
+      "communicationPower": 80,
+      "scores": {
+        "clarity": 80,
+        "storytelling": 75,
+        "engagement": 80,
+        "wit": 70,
+        "delivery": 78,
+        "confidence": 82,
+        "structure": 80,
+        "vocabulary": 80,
+        "responsiveness": 85,
+        "audienceAwareness": 80,
+        "conciseness": 82,
+        "emotionalConnection": 75,
+        "answerQuality": 80,
+        "relevance": 82,
+        "evidence": 75,
+        "reasoning": 80,
+        "problemSolving": 80,
+        "professionalism": 85,
+        "interviewImpact": 80
+      },
+      "biggestWeakness": "Could include more specific metrics or concrete examples.",
+      "oneBigUpgrade": "Pause silently when gathering your thoughts instead of filling space with sound.",
+      "durationSeconds": 1,
+      "transcriptSnippet": "No speech recorded during session."
+    },
+    {
+      "id": "sess_1789326114405",
+      "timestamp": "2026-09-13T19:01:54.405Z",
+      "mode": "Interview",
+      "communicationPower": 80,
+      "scores": {
+        "clarity": 80,
+        "storytelling": 75,
+        "engagement": 80,
+        "wit": 70,
+        "delivery": 78,
+        "confidence": 82,
+        "structure": 80,
+        "vocabulary": 80,
+        "responsiveness": 85,
+        "audienceAwareness": 80,
+        "conciseness": 82,
+        "emotionalConnection": 75,
+        "answerQuality": 80,
+        "relevance": 82,
+        "evidence": 75,
+        "reasoning": 80,
+        "problemSolving": 80,
+        "professionalism": 85,
+        "interviewImpact": 80
+      },
+      "biggestWeakness": "Could include more specific metrics or concrete examples.",
+      "oneBigUpgrade": "Pause silently when gathering your thoughts instead of filling space with sound.",
+      "durationSeconds": 2,
+      "transcriptSnippet": "No speech recorded during session."
+    },
+    {
+      "id": "sess_1789325926940",
+      "timestamp": "2026-09-13T18:58:46.940Z",
+      "mode": "Interview",
+      "communicationPower": 78,
+      "scores": {
+        "clarity": 78,
+        "storytelling": 73,
+        "engagement": 78,
+        "wit": 68,
+        "delivery": 76,
+        "confidence": 80,
+        "structure": 78,
+        "vocabulary": 80,
+        "responsiveness": 85,
+        "audienceAwareness": 78,
+        "conciseness": 82,
+        "emotionalConnection": 75,
+        "answerQuality": 78,
+        "relevance": 80,
+        "evidence": 73,
+        "reasoning": 78,
+        "problemSolving": 78,
+        "professionalism": 85,
+        "interviewImpact": 78
+      },
+      "biggestWeakness": "Could include more specific metrics or concrete examples.",
+      "oneBigUpgrade": "Pause silently when gathering your thoughts instead of filling space with sound.",
+      "durationSeconds": 25,
+      "transcriptSnippet": "Hello, I am demonstrating my project called IMPACT AI Communication Coach. My role was designing the speech recognition engine and integrating Gemini AI for evidence-based feedback."
+    },
+    {
       "id": "sess_1789312414481",
       "timestamp": "2026-09-13T15:13:34.483Z",
       "mode": "Interview",
@@ -68,7 +192,7 @@
     "fastSpeaking": 0,
     "weakHooks": 0,
     "rambling": 0,
-    "lackOfEvidence": 2,
+    "lackOfEvidence": 6,
     "monotoneDelivery": 0
   },
   "skillsProgress": [
@@ -92,6 +216,34 @@
       "storytelling": 73,
       "interview": 78,
       "clarity": 78
+    },
+    {
+      "date": "Sep 14",
+      "power": 78,
+      "storytelling": 73,
+      "interview": 78,
+      "clarity": 78
+    },
+    {
+      "date": "Sep 14",
+      "power": 80,
+      "storytelling": 75,
+      "interview": 80,
+      "clarity": 80
+    },
+    {
+      "date": "Sep 14",
+      "power": 80,
+      "storytelling": 75,
+      "interview": 80,
+      "clarity": 80
+    },
+    {
+      "date": "Sep 14",
+      "power": 80,
+      "storytelling": 75,
+      "interview": 80,
+      "clarity": 80
     }
   ]
 }

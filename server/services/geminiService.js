@@ -450,41 +450,141 @@ Return JSON:
   }
 }
 
+/**
+ * Evaluate Session (Post-Session Analysis)
+ */
+export async function evaluateSession(transcript, metrics, mode = 'general', extraData = {}) {
+  const ai = getGenAIClient();
+  if (!ai) {
+    return generateFallbackPostSessionReport(transcript, metrics, mode, extraData);
+  }
+
+  const prompt = `
+Evaluate deeply and objectively based strictly on evidence in what the user said and how they delivered it.
+Do NOT artificially inflate scores or default to 80.
+Calculate scores dynamically across all subscores (ranging from 20 to 98) based on actual speech quality:
+- Penalize heavily for excessive filler words (um, uh, like), rambling, short incomplete answers under 25 words, monotone delivery, or lack of quantitative evidence.
+- Reward clear structure, concise phrasing, vivid storytelling, quantitative metrics, and optimal vocal pace (120-160 WPM).
+- For every weakness listed, cite EXACT quotes/evidence from what the user said.
+
+Session Mode: ${mode}
+Transcript: "${transcript}"
+Audio Metrics: WPM=${metrics.wpm || metrics.avgWpm || 135}, Fillers=${metrics.fillerCount || 0}, Pauses=${metrics.pauses || 'Good'}
+Extra Data: ${JSON.stringify(extraData)}
+
+Output valid JSON strictly adhering to schema:
+{
+  "communicationPower": 78,
+  "scores": {
+    "clarity": 80,
+    "storytelling": 72,
+    "engagement": 75,
+    "wit": 65,
+    "delivery": 78,
+    "confidence": 82,
+    "structure": 70,
+    "vocabulary": 80,
+    "responsiveness": 85,
+    "audienceAwareness": 76,
+    "conciseness": 68,
+    "emotionalConnection": 74,
+    "answerQuality": 80,
+    "relevance": 85,
+    "evidence": 70,
+    "reasoning": 78,
+    "problemSolving": 75,
+    "professionalism": 88,
+    "interviewImpact": 79
+  },
+  "whatWorked": [
+    "Specific strength point 1 with quote or evidence",
+    "Specific strength point 2 with quote or evidence"
+  ],
+  "biggestWeakness": "The single highest-impact problem identified during the session.",
+  "oneBigUpgrade": "The single change that would transform the user's communication most.",
+  "top3Improvements": [
+    "Actionable improvement 1",
+    "Actionable improvement 2",
+    "Actionable improvement 3"
+  ],
+  "practiceExercise": {
+    "title": "Exercise Name",
+    "instruction": "Step-by-step exercise instructions tailored to fix their biggest weakness."
+  },
+  "memorabilityAssessment": {
+    "score": 75,
+    "whatListenerRemembers": "What a listener would actually remember 24 hours later.",
+    "howToMakeUnforgettable": "Actionable advice to turn this response/speech from clear to unforgettable."
+  }
+}
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+
+    return JSON.parse(response.text);
+  } catch (err) {
+    console.error('Gemini Post-Session Analysis Error:', err.message);
+    return generateFallbackPostSessionReport(transcript, metrics, mode, extraData);
+  }
+}
+
 // Helpers
 function generateFallbackPostSessionReport(transcript, metrics, mode, extraData) {
-  const words = transcript.split(/\s+/).filter(Boolean).length;
+  const words = (transcript || '').split(/\s+/).filter(Boolean);
+  const wordCount = words.length;
   const fillers = metrics.fillerCount || 0;
-  const score = Math.max(50, Math.min(95, 80 - fillers * 2 + (words > 50 ? 10 : 0)));
+  const wpm = metrics.wpm || metrics.avgWpm || 135;
+
+  let baseScore = 70;
+  if (wordCount < 15) baseScore -= 25;
+  else if (wordCount < 30) baseScore -= 12;
+  else if (wordCount > 60) baseScore += 10;
+
+  baseScore -= (fillers * 6);
+
+  if (wpm > 180) baseScore -= 12;
+  else if (wpm < 90) baseScore -= 10;
+
+  const score = Math.max(30, Math.min(96, Math.round(baseScore)));
 
   return {
     communicationPower: score,
     scores: {
       clarity: score,
-      storytelling: Math.max(50, score - 5),
+      storytelling: Math.max(30, score - 5),
       engagement: score,
-      wit: Math.max(50, score - 10),
-      delivery: Math.max(50, score - 2),
-      confidence: Math.max(50, score + 2),
+      wit: Math.max(30, score - 10),
+      delivery: Math.max(30, score - 2),
+      confidence: Math.max(30, score + 2),
       structure: score,
-      vocabulary: 80,
-      responsiveness: 85,
+      vocabulary: wordCount > 40 ? 82 : 65,
+      responsiveness: score,
       audienceAwareness: score,
-      conciseness: fillers > 3 ? 65 : 82,
-      emotionalConnection: 75,
+      conciseness: fillers > 2 ? 50 : 82,
+      emotionalConnection: Math.max(30, score - 4),
       answerQuality: score,
       relevance: score + 2,
-      evidence: score - 5,
+      evidence: wordCount > 50 ? 78 : 55,
       reasoning: score,
       problemSolving: score,
-      professionalism: 85,
+      professionalism: 80,
       interviewImpact: score
     },
     whatWorked: [
-      `Maintained a solid vocal pace around ${metrics.avgWpm || 135} WPM.`,
-      "Delivered a complete thought with clear key messages."
+      `Spoke at a vocal pace of ${wpm} WPM across ${wordCount} words.`,
+      "Captured active spoken speech during the session."
     ],
-    biggestWeakness: fillers > 2 ? `Used ${fillers} filler words which diluted confidence.` : "Could include more specific metrics or concrete examples.",
-    oneBigUpgrade: "Pause silently when gathering your thoughts instead of filling space with sound.",
+    biggestWeakness: fillers > 1 
+      ? `Used ${fillers} filler words ("um", "uh", "like") which diluted confidence and clarity.` 
+      : wordCount < 25 
+      ? `Answer was brief (${wordCount} words). Elaborate further to demonstrate depth.` 
+      : "Could structure your core message with a direct quantitative example.",
+    oneBigUpgrade: "Pause silently when gathering thoughts instead of filling sound gaps.",
     top3Improvements: [
       "State your core recommendation in sentence #1.",
       "Support claims with 1 concrete number or specific event.",
@@ -492,7 +592,7 @@ function generateFallbackPostSessionReport(transcript, metrics, mode, extraData)
     ],
     practiceExercise: {
       title: "The 30-Second Bullet Challenge",
-      instruction: "State your main point, give 1 specific example, and stop. Practice 3 times cleanly."
+      instruction: "State your main point, give 1 specific example, and stop cleanly."
     },
     memorabilityAssessment: {
       score: score,

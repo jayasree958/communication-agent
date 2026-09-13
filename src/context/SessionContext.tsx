@@ -42,6 +42,8 @@ export interface SessionReport {
   wordCount?: number;
   wpm?: number;
   fillerCount?: number;
+  isEmptySession?: boolean;
+  emptyMessage?: string;
 }
 
 interface SessionContextType {
@@ -261,17 +263,34 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (mediaEngineRef.current) mediaEngineRef.current.stopMedia();
     setIsMediaActive(false);
 
-    setSessionState('analyzing');
-
-    const finalTranscript = capturedTranscript || (speechStats.transcript + ' ' + speechStats.interimTranscript).trim();
+    const finalTranscript = (capturedTranscript || speechStats.transcript + ' ' + speechStats.interimTranscript).trim();
 
     const actualDuration = sessionTimerSeconds || 1;
-    const actualWordCount = finalTranscript.split(/\s+/).filter(Boolean).length;
-    const actualWpm = Math.round((actualWordCount / actualDuration) * 60) || audioMetrics.wpm || 135;
+    const actualWordCount = finalTranscript ? finalTranscript.split(/\s+/).filter(Boolean).length : 0;
+    const actualWpm = actualDuration > 0 ? Math.round((actualWordCount / actualDuration) * 60) : 0;
     const actualFillers = speechStats.fillerCount;
 
+    // Check if enough speech was captured (Part 15 — NO FAKE ANALYSIS)
+    if (actualWordCount < 4 || !finalTranscript || finalTranscript === 'No speech recorded during session.') {
+      setCurrentReport({
+        isEmptySession: true,
+        communicationPower: 0,
+        scores: {},
+        whatWorked: [],
+        biggestWeakness: "No usable speech audio captured.",
+        oneBigUpgrade: "Turn on your microphone and speak clearly for at least 10–15 seconds.",
+        top3Improvements: [],
+        practiceExercise: { title: "", instruction: "" },
+        emptyMessage: "Not enough speech was captured to analyze this session."
+      });
+      setSessionState('report');
+      return;
+    }
+
+    setSessionState('analyzing');
+
     const payload = {
-      transcript: finalTranscript || 'No speech recorded during session.',
+      transcript: finalTranscript,
       metrics: {
         ...audioMetrics,
         wpm: actualWpm,
@@ -310,29 +329,41 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw new Error('Analysis property missing in server response');
       }
     } catch (err) {
-      console.warn('Backend session analysis failed, constructing local report fallback:', err);
-      const fallbackScore = Math.max(50, Math.min(95, 80 - actualFillers * 3 + (actualWordCount > 20 ? 10 : 0)));
+      console.warn('Backend session analysis failed, constructing dynamic client report:', err);
+      
+      // Calculate real dynamic score based on actual speech metrics
+      let dynamicScore = 70;
+      if (actualWordCount < 15) dynamicScore -= 20;
+      else if (actualWordCount < 30) dynamicScore -= 10;
+      else if (actualWordCount > 60) dynamicScore += 10;
+
+      dynamicScore -= (actualFillers * 6);
+      if (actualWpm > 180) dynamicScore -= 10;
+      else if (actualWpm < 90) dynamicScore -= 10;
+
+      const finalScore = Math.max(30, Math.min(96, Math.round(dynamicScore)));
+
       const fallbackReport: SessionReport = {
-        communicationPower: fallbackScore,
+        communicationPower: finalScore,
         scores: {
-          clarity: fallbackScore,
-          storytelling: Math.max(50, fallbackScore - 5),
-          engagement: fallbackScore,
-          delivery: Math.max(50, fallbackScore - 2),
-          confidence: Math.max(50, fallbackScore + 2),
-          structure: fallbackScore,
-          conciseness: actualFillers > 2 ? 65 : 82,
-          interviewImpact: fallbackScore
+          clarity: finalScore,
+          storytelling: Math.max(30, finalScore - 5),
+          engagement: finalScore,
+          delivery: Math.max(30, finalScore - 2),
+          confidence: Math.max(30, finalScore + 2),
+          structure: finalScore,
+          conciseness: actualFillers > 2 ? 55 : 82,
+          interviewImpact: finalScore
         },
         whatWorked: [
-          `Maintained a vocal rate of ~${actualWpm} WPM across ${actualDuration} seconds.`,
-          `Delivered ${actualWordCount} total words during the ${mode} session.`
+          `Spoke at a rate of ${actualWpm} WPM across ${actualDuration} seconds.`,
+          `Captured ${actualWordCount} words in ${mode} mode.`
         ],
-        biggestWeakness: actualFillers > 2 
-          ? `Detected ${actualFillers} filler words ("um", "uh", "like") which diluted impact.` 
-          : actualWordCount < 20 
-          ? "Speech duration was brief. Elaborate with additional context and examples." 
-          : "Could structure your core message with a direct quantitative example.",
+        biggestWeakness: actualFillers > 1 
+          ? `Used ${actualFillers} filler words ("um", "uh", "like") which reduced clarity.` 
+          : actualWordCount < 25 
+          ? "Answer was very brief. Include specific examples to show depth." 
+          : "Could structure your conclusion with 1 concrete number or metric.",
         oneBigUpgrade: "Pause silently when gathering thoughts instead of filling sound gap.",
         top3Improvements: [
           "State your core recommendation in sentence 1.",
@@ -344,7 +375,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           instruction: "Deliver a 30-second statement with 0 filler words and 1 concrete example."
         },
         memorabilityAssessment: {
-          score: fallbackScore,
+          score: finalScore,
           whatListenerRemembers: "The main takeaway of your statement.",
           howToMakeUnforgettable: "Incorporate a vivid analogy or personal milestone."
         },

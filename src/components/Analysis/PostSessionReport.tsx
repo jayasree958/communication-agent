@@ -1,17 +1,56 @@
 import React from 'react';
-import { Trophy, CheckCircle2, AlertTriangle, ArrowUpRight, Dumbbell, Sparkles, RefreshCw, Eye } from 'lucide-react';
+import { Trophy, CheckCircle2, AlertTriangle, ArrowUpRight, Dumbbell, Sparkles, RefreshCw, Eye, MicOff } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 
 export const PostSessionReport: React.FC = () => {
   const { currentReport, resetSession, mode } = useSession();
 
-  if (!currentReport) {
+  if (!currentReport || currentReport.isEmptySession) {
     return (
-      <div className="glass-panel" style={{ maxWidth: '900px', margin: '40px auto', padding: '40px', textAlign: 'center' }}>
-        <h3 style={{ fontSize: '1.2rem', color: '#fff' }}>No Active Session Analysis</h3>
-        <p style={{ color: '#9ca3af', marginTop: '8px' }}>Start a coaching session to view your post-session report.</p>
-        <button onClick={resetSession} className="btn-primary" style={{ marginTop: '20px' }}>
-          Back to Live HUD
+      <div className="glass-panel" style={{ maxWidth: '800px', margin: '60px auto', padding: '40px 30px', textAlign: 'center' }}>
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.12)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 20px auto'
+        }}>
+          <MicOff size={32} style={{ color: '#fbbf24' }} />
+        </div>
+        
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>Not Enough Speech Captured</h3>
+        <p style={{ color: '#9ca3af', marginTop: '10px', fontSize: '0.95rem', lineHeight: 1.6, maxWidth: '600px', margin: '10px auto 0 auto' }}>
+          {currentReport?.emptyMessage || "IMPACT requires live speech audio to evaluate your communication power, structure, WPM, fillers, and storytelling."}
+        </p>
+
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginTop: '24px',
+          textAlign: 'left',
+          fontSize: '0.88rem',
+          color: '#d1d5db',
+          lineHeight: 1.6
+        }}>
+          <strong style={{ color: '#818cf8', textTransform: 'uppercase', fontSize: '0.78rem', letterSpacing: '0.05em' }}>
+            💡 Tips for a Great Session:
+          </strong>
+          <ul style={{ paddingLeft: '20px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <li>Ensure microphone permissions are enabled in your browser bar.</li>
+            <li>Speak continuously into your microphone for at least 10–30 seconds.</li>
+            <li>You can also type text in the live transcript box if your microphone is unavailable.</li>
+          </ul>
+        </div>
+
+        <button onClick={resetSession} className="btn-primary" style={{ marginTop: '28px', padding: '12px 32px', fontSize: '0.95rem' }}>
+          <RefreshCw size={18} />
+          <span>Start New Coaching Session</span>
         </button>
       </div>
     );
